@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { env } from "../config/env.js";
+import type { AppRole } from "../interfaces/api.interface.js";
 import { AUTH_COOKIE } from "../middleware/auth.middleware.js";
 import { authService } from "../services/auth.service.js";
 import { sendSuccess } from "../utils/apiResponse.js";
@@ -77,5 +78,24 @@ export const authController = {
     };
     await authService.resetPassword(email, token, password);
     sendSuccess(res, null, "Password reset successful");
+  }),
+
+  listUsers: asyncHandler(async (req: Request, res: Response) => {
+    const users = await authService.listUsers(req.user!.sub);
+    sendSuccess(res, users, "Users retrieved");
+  }),
+
+  updateUserRole: asyncHandler(async (req: Request, res: Response) => {
+    const { role } = req.body as { role: string };
+    const result = await authService.updateUserRole(
+      req.user!.sub,
+      req.user!.email,
+      String(req.params.userId),
+      role as AppRole,
+    );
+    if (result.accessToken) {
+      setAuthCookie(res, result.accessToken);
+    }
+    sendSuccess(res, result, "Role updated successfully");
   }),
 };

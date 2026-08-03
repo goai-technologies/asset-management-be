@@ -30,3 +30,10 @@ export const resetPasswordValidator = [
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters"),
 ];
+
+export const updateUserRoleValidator = [
+  body("role")
+    .trim()
+    .isIn(["administrator", "it_team", "employee"])
+    .withMessage("Role must be administrator, it_team, or employee"),
+];

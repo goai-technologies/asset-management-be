@@ -63,10 +63,53 @@ export const authRepository = {
 
   async getUserRoles(userId: string): Promise<string[]> {
     const { rows } = await query<{ role: string }>(
-      `SELECT role::text AS role FROM public.user_roles WHERE user_id = $1`,
+      `SELECT role::text AS role
+       FROM public.user_roles
+       WHERE user_id = $1
+       ORDER BY CASE role::text
+         WHEN 'administrator' THEN 1
+         WHEN 'it_team' THEN 2
+         ELSE 3
+       END`,
       [userId],
     );
     return rows.map((r) => r.role);
+  },
+
+  async listUsersWithRoles(): Promise<
+    Array<{ id: string; name: string; email: string; role: string }>
+  > {
+    const { rows } = await query<{ id: string; name: string; email: string; role: string }>(
+      `SELECT u.id,
+              COALESCE(p.name, u.raw_user_meta_data->>'name', split_part(u.email, '@', 1)) AS name,
+              u.email,
+              COALESCE(
+                (
+                  SELECT ur.role::text
+                  FROM public.user_roles ur
+                  WHERE ur.user_id = u.id
+                  ORDER BY CASE ur.role::text
+                    WHEN 'administrator' THEN 1
+                    WHEN 'it_team' THEN 2
+                    ELSE 3
+                  END
+                  LIMIT 1
+                ),
+                'employee'
+              ) AS role
+       FROM auth.users u
+       LEFT JOIN public.profiles p ON p.id = u.id
+       ORDER BY u.email`,
+    );
+    return rows;
+  },
+
+  async setUserRole(userId: string, role: string): Promise<void> {
+    await query(`DELETE FROM public.user_roles WHERE user_id = $1`, [userId]);
+    await query(
+      `INSERT INTO public.user_roles (user_id, role) VALUES ($1, $2::public.app_role)`,
+      [userId, role],
+    );
   },
 
   async upsertPasswordResetToken(email: string, token: string, expiresAt: Date): Promise<void> {

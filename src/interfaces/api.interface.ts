@@ -26,3 +26,17 @@ export interface LoginResult {
   accessToken: string;
   user: AuthUserProfile;
 }
+
+export type AppRole = "administrator" | "it_team" | "employee";
+
+export interface AdminUserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: AppRole;
+}
+
+export interface UpdateUserRoleResult {
+  accessToken?: string;
+  user?: AuthUserProfile;
+}

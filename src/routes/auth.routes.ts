@@ -8,6 +8,7 @@ import {
   loginValidator,
   registerValidator,
   resetPasswordValidator,
+  updateUserRoleValidator,
 } from "../validators/auth.validator.js";
 
 const router = Router();
@@ -34,6 +35,14 @@ router.post(
   resetPasswordValidator,
   validateRequest,
   authController.resetPassword,
+);
+router.get("/users", authenticate, authController.listUsers);
+router.put(
+  "/users/:userId/role",
+  authenticate,
+  updateUserRoleValidator,
+  validateRequest,
+  authController.updateUserRole,
 );
 
 export default router;

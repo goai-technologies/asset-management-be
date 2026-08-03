@@ -2,8 +2,20 @@ import { AppError } from "../utils/AppError.js";
 import { comparePassword, hashPassword } from "../utils/password.js";
 import { signAccessToken } from "../utils/jwt.js";
 import { authRepository } from "../repositories/auth.repository.js";
-import type { AuthUserProfile, LoginResult } from "../interfaces/api.interface.js";
+import type {
+  AdminUserRow,
+  AppRole,
+  AuthUserProfile,
+  LoginResult,
+  UpdateUserRoleResult,
+} from "../interfaces/api.interface.js";
 import { env } from "../config/env.js";
+
+const APP_ROLES: AppRole[] = ["administrator", "it_team", "employee"];
+
+function isAppRole(value: string): value is AppRole {
+  return APP_ROLES.includes(value as AppRole);
+}
 
 function generateOtp(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -107,5 +119,60 @@ export const authService = {
     const passwordHash = await hashPassword(newPassword);
     await authRepository.updatePasswordByEmail(normalizedEmail, passwordHash);
     await authRepository.deletePasswordResetToken(normalizedEmail);
+  },
+
+  async listUsers(actorId: string): Promise<AdminUserRow[]> {
+    const actorRoles = await authRepository.getUserRoles(actorId);
+    const isActorAdmin = actorRoles.includes("administrator");
+
+    if (!isActorAdmin && !env.allowDevSelfRoleChange) {
+      throw new AppError(403, "Administrator access required");
+    }
+
+    const users = await authRepository.listUsersWithRoles();
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: isAppRole(user.role) ? user.role : "employee",
+    }));
+  },
+
+  async updateUserRole(
+    actorId: string,
+    actorEmail: string,
+    targetUserId: string,
+    newRole: AppRole,
+  ): Promise<UpdateUserRoleResult> {
+    if (!isAppRole(newRole)) {
+      throw new AppError(400, "Invalid role");
+    }
+
+    const isSelf = actorId === targetUserId;
+    const actorRoles = await authRepository.getUserRoles(actorId);
+    const isActorAdmin = actorRoles.includes("administrator");
+
+    if (isSelf && !env.allowDevSelfRoleChange) {
+      throw new AppError(403, "You cannot change your own role");
+    }
+
+    if (!isActorAdmin && !(isSelf && env.allowDevSelfRoleChange)) {
+      throw new AppError(403, "Administrator access required");
+    }
+
+    const targetUser = await authRepository.findUserById(targetUserId);
+    if (!targetUser) {
+      throw new AppError(404, "User not found");
+    }
+
+    await authRepository.setUserRole(targetUserId, newRole);
+
+    if (!isSelf) {
+      return {};
+    }
+
+    const user = await buildUserProfile(actorId, actorEmail);
+    const accessToken = signAccessToken({ sub: actorId, email: actorEmail });
+    return { accessToken, user };
   },
 };

@@ -25,4 +25,7 @@ export const env = {
     .filter(Boolean),
   cookieSecure: process.env.COOKIE_SECURE === "true",
   isProduction: process.env.NODE_ENV === "production",
+  /** Allows self role changes for local testing (NODE_ENV !== production or DEV_MODE=true). */
+  allowDevSelfRoleChange:
+    process.env.NODE_ENV !== "production" || process.env.DEV_MODE === "true",
 } as const;

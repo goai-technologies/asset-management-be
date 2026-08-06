@@ -41,6 +41,11 @@ const addressRules = body("address")
   .notEmpty()
   .withMessage("Address is required");
 
+const gstNumberRules = body("gstNumber")
+  .trim()
+  .notEmpty()
+  .withMessage("GST number is required");
+
 export const vendorIdValidator = [param("id").isUUID().withMessage("Valid vendor id is required")];
 
 export const createVendorValidator = [
@@ -50,6 +55,7 @@ export const createVendorValidator = [
   emailRules,
   phoneRules,
   addressRules,
+  gstNumberRules,
 ];
 
 export const updateVendorValidator = [
@@ -86,6 +92,7 @@ export const updateVendorValidator = [
       return true;
     }),
   body("address").optional().trim().notEmpty().withMessage("Address cannot be empty"),
+  body("gstNumber").optional().trim().notEmpty().withMessage("GST number cannot be empty"),
 ];
 
 export const searchVendorValidator = [

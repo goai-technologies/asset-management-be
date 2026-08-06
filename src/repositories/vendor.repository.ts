@@ -9,6 +9,7 @@ type VendorRow = {
   phone: string | null;
   address: string | null;
   office_address: string | null;
+  gst_number: string | null;
   created_at: Date;
   updated_at: Date;
   asset_count?: number;
@@ -30,6 +31,7 @@ const vendorSelect = `
     v.phone,
     v.address,
     v.office_address,
+    v.gst_number,
     v.created_at,
     v.updated_at,
     COUNT(a.id) FILTER (WHERE NOT a.is_deleted)::INTEGER AS asset_count
@@ -74,7 +76,7 @@ export const vendorRepository = {
 
   async findByVendorCode(vendorCode: string, excludeId?: string): Promise<VendorRow | null> {
     const { rows } = await query<VendorRow>(
-      `SELECT id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, created_at, updated_at
+      `SELECT id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, gst_number, created_at, updated_at
        FROM public.vendors
        WHERE UPPER(vendor_code) = UPPER($1)
          AND ($2::uuid IS NULL OR id <> $2::uuid)
@@ -86,7 +88,7 @@ export const vendorRepository = {
 
   async findByName(name: string, excludeId?: string): Promise<VendorRow | null> {
     const { rows } = await query<VendorRow>(
-      `SELECT id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, created_at, updated_at
+      `SELECT id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, gst_number, created_at, updated_at
        FROM public.vendors
        WHERE lower(vendor_name) = lower($1)
          AND ($2::uuid IS NULL OR id <> $2::uuid)
@@ -98,7 +100,7 @@ export const vendorRepository = {
 
   async findByEmail(email: string, excludeId?: string): Promise<VendorRow | null> {
     const { rows } = await query<VendorRow>(
-      `SELECT id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, created_at, updated_at
+      `SELECT id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, gst_number, created_at, updated_at
        FROM public.vendors
        WHERE lower(email) = lower($1)
          AND ($2::uuid IS NULL OR id <> $2::uuid)
@@ -125,13 +127,22 @@ export const vendorRepository = {
     email: string,
     phone: string,
     address: string,
+    gstNumber: string,
   ): Promise<VendorRow> {
     const { rows } = await query<VendorRow>(
       `INSERT INTO public.vendors (
-         vendor_code, vendor_name, contact_person, email, phone, address, office_address, status
-       ) VALUES ($1, $2, $3, $4, $5, $6, $6, 'active')
-       RETURNING id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, created_at, updated_at`,
-      [vendorCode, name.trim(), contactPerson.trim(), email.trim(), phone.trim(), address.trim()],
+         vendor_code, vendor_name, contact_person, email, phone, address, office_address, gst_number, status
+       ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7, 'active')
+       RETURNING id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, gst_number, created_at, updated_at`,
+      [
+        vendorCode,
+        name.trim(),
+        contactPerson.trim(),
+        email.trim(),
+        phone.trim(),
+        address.trim(),
+        gstNumber.trim(),
+      ],
     );
     return { ...rows[0], asset_count: 0 };
   },
@@ -144,6 +155,7 @@ export const vendorRepository = {
     email: string,
     phone: string,
     address: string,
+    gstNumber: string,
   ): Promise<VendorRow | null> {
     const { rows } = await query<VendorRow>(
       `UPDATE public.vendors
@@ -154,10 +166,20 @@ export const vendorRepository = {
            phone = $6,
            address = $7,
            office_address = $7,
+           gst_number = $8,
            updated_at = NOW()
        WHERE id = $1
-       RETURNING id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, created_at, updated_at`,
-      [id, vendorCode, name.trim(), contactPerson.trim(), email.trim(), phone.trim(), address.trim()],
+       RETURNING id, vendor_code, vendor_name, contact_person, email, phone, address, office_address, gst_number, created_at, updated_at`,
+      [
+        id,
+        vendorCode,
+        name.trim(),
+        contactPerson.trim(),
+        email.trim(),
+        phone.trim(),
+        address.trim(),
+        gstNumber.trim(),
+      ],
     );
     return rows[0] ?? null;
   },

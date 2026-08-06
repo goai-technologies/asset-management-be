@@ -6,6 +6,7 @@ export interface Vendor {
   email: string;
   phone: string;
   address: string;
+  gstNumber: string;
   assetCount: number;
   createdAt: string;
   updatedAt: string;
@@ -18,6 +19,7 @@ export interface CreateVendorInput {
   email: string;
   phone: string;
   address: string;
+  gstNumber: string;
 }
 
 export interface UpdateVendorInput {
@@ -27,6 +29,7 @@ export interface UpdateVendorInput {
   email?: string;
   phone?: string;
   address?: string;
+  gstNumber?: string;
 }
 
 export interface VendorStats {

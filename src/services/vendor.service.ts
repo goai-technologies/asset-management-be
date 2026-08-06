@@ -22,6 +22,7 @@ function mapVendor(row: {
   phone: string | null;
   address: string | null;
   office_address: string | null;
+  gst_number: string | null;
   created_at: Date;
   updated_at: Date;
   asset_count?: number;
@@ -34,6 +35,7 @@ function mapVendor(row: {
     email: row.email ?? "",
     phone: row.phone ?? "",
     address: resolveAddress(row),
+    gstNumber: row.gst_number?.trim() ?? "",
     assetCount: Number(row.asset_count ?? 0),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
@@ -119,6 +121,7 @@ export const vendorService = {
     const email = input.email.trim();
     const phone = input.phone.trim();
     const address = input.address.trim();
+    const gstNumber = input.gstNumber.trim();
 
     await assertUniqueVendorCode(vendorCode);
     await assertUniqueName(name);
@@ -131,6 +134,7 @@ export const vendorService = {
       email,
       phone,
       address,
+      gstNumber,
     );
     return mapVendor(row);
   },
@@ -149,6 +153,7 @@ export const vendorService = {
     const email = (input.email ?? existing.email ?? "").trim();
     const phone = (input.phone ?? existing.phone ?? "").trim();
     const address = (input.address ?? resolveAddress(existing)).trim();
+    const gstNumber = (input.gstNumber ?? existing.gst_number ?? "").trim();
 
     if (input.vendorCode) {
       assertVendorCodeFormat(vendorCode);
@@ -166,6 +171,7 @@ export const vendorService = {
       email,
       phone,
       address,
+      gstNumber,
     );
     if (!row) {
       throw new AppError(404, "Vendor not found");

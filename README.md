@@ -23,6 +23,38 @@ npm start              # production (compiled dist/)
 
 Requires the existing `goai_assets` PostgreSQL database (same schema as the React app).
 
+## Setup (Docker Compose)
+
+Runs the API and a PostgreSQL 16 container together — no local Node or Postgres install needed.
+
+```bash
+docker compose up -d --build
+```
+
+This starts:
+
+- **`postgres`** — Postgres 16, exposed on `5432`, data persisted in the `postgres-data` volume
+- **`api`** — built from the [Dockerfile](Dockerfile), exposed on `5001`, waits for Postgres to be healthy before starting
+
+The `api` service's `DATABASE_URL` is wired to the `postgres` service automatically. Override any setting (`POSTGRES_PASSWORD`, `JWT_SECRET`, `API_PORT`, `CORS_ORIGIN`, etc.) via a `.env` file next to `docker-compose.yml` — see [.env.example](.env.example) for the full list of variables and their defaults.
+
+The database starts empty. Drop schema/seed `.sql` files into [db/init/](db/init/) and they run automatically the first time the `postgres-data` volume is created:
+
+```bash
+docker compose down -v   # wipe the volume to re-run init scripts
+docker compose up -d --build
+```
+
+Useful commands:
+
+```bash
+docker compose logs -f api   # tail API logs
+docker compose ps            # container status
+docker compose down          # stop (add -v to also delete the DB volume)
+```
+
+Uploaded asset images persist in the `uploads-data` volume, mounted at `/app/uploads` in the `api` container.
+
 ## Architecture (MVC)
 
 ```

@@ -1,0 +1,2 @@
+# Place schema/seed .sql files here — Postgres runs them alphabetically the
+# first time the data volume is created (they are skipped on later starts).

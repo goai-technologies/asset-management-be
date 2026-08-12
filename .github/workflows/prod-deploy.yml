@@ -1,4 +1,4 @@
-name: Build and Push to ECR (Develop)
+name: Build and Push to ECR (Prod)
 
 on:
   push:
@@ -18,6 +18,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Debug env
+        run: |
+          echo "AWS_ACCOUNT_ID: $AWS_ACCOUNT_ID"
+          echo "AWS_ROLE_TO_ASSUME: $AWS_ROLE_TO_ASSUME"
+          echo "AWS_ACCOUNT_ID length: ${#AWS_ACCOUNT_ID}"
+          echo "AWS_ROLE_TO_ASSUME length: ${#AWS_ROLE_TO_ASSUME}"
+          echo "AWS_ROLE_TO_ASSUME last 6 chars: ${AWS_ROLE_TO_ASSUME: -6}"
 
       - name: Build & Push Docker Image using Composite Action
         uses: goai-technologies/github-actions-template/build-and-push@main

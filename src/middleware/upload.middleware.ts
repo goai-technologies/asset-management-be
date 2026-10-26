@@ -7,7 +7,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const assetUploadsDir = path.join(__dirname, "..", "..", "uploads", "assets");
 
 if (!fs.existsSync(assetUploadsDir)) {
-  fs.mkdirSync(assetUploadsDir, { recursive: true });
+  try {
+    fs.mkdirSync(assetUploadsDir, { recursive: true });
+  } catch (error) {
+    // Read-only filesystems (e.g. Vercel) can't create this folder; don't crash the whole API.
+    console.warn("[Uploads] Could not create upload folder; image uploads are disabled:", error);
+  }
 }
 
 const ALLOWED_MIME_TYPES = new Set([

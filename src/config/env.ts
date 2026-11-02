@@ -13,6 +13,10 @@ function required(name: string): string {
   return value;
 }
 
+const zohoClientId = process.env.ZOHO_CLIENT_ID?.trim() ?? "";
+const zohoClientSecret = process.env.ZOHO_CLIENT_SECRET?.trim() ?? "";
+const zohoRefreshToken = process.env.ZOHO_REFRESH_TOKEN?.trim() ?? "";
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 5001),
@@ -28,4 +32,16 @@ export const env = {
   /** Allows self role changes for local testing (NODE_ENV !== production or DEV_MODE=true). */
   allowDevSelfRoleChange:
     process.env.NODE_ENV !== "production" || process.env.DEV_MODE === "true",
+  zoho: {
+    accountsUrl: (process.env.ZOHO_ACCOUNTS_URL ?? "https://accounts.zoho.com").replace(/\/$/, ""),
+    peopleBaseUrl: (process.env.ZOHO_PEOPLE_BASE_URL ?? "https://people.zoho.com").replace(
+      /\/$/,
+      "",
+    ),
+    clientId: zohoClientId,
+    clientSecret: zohoClientSecret,
+    refreshToken: zohoRefreshToken,
+    employeeForm: process.env.ZOHO_EMPLOYEE_FORM?.trim() || "employee",
+    isConfigured: Boolean(zohoClientId && zohoClientSecret && zohoRefreshToken),
+  },
 } as const;

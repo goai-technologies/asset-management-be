@@ -26,6 +26,11 @@ export const employeeController = {
     sendSuccess(res, data, "Employee stats retrieved");
   }),
 
+  sync: asyncHandler(async (_req: Request, res: Response) => {
+    const data = await employeeService.syncFromZoho();
+    sendSuccess(res, data, "Employees synced from Zoho People");
+  }),
+
   create: asyncHandler(async (req: Request, res: Response) => {
     const body = req.body as CreateEmployeeInput;
     const data = await employeeService.createEmployee(body);

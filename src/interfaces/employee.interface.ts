@@ -45,3 +45,10 @@ export interface EmployeeStats {
   employeesWithAssets: number;
   employeesWithoutAssets: number;
 }
+
+export interface EmployeeSyncResult {
+  created: number;
+  updated: number;
+  deactivated: number;
+  total: number;
+}

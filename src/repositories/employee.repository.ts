@@ -13,9 +13,22 @@ type EmployeeRow = {
   location: string | null;
   manager: string | null;
   status: string;
+  zoho_record_id?: string | null;
   created_at: Date;
   updated_at: Date;
   assigned_assets?: number;
+};
+
+export type ZohoEmployeeUpsertInput = {
+  zohoRecordId: string;
+  employeeId: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  location: string;
+  status: "active" | "inactive";
 };
 
 type StatsRow = {
@@ -38,6 +51,7 @@ const employeeSelect = `
     e.location,
     e.manager,
     e.status::TEXT AS status,
+    e.zoho_record_id,
     e.created_at,
     e.updated_at,
     COUNT(a.id) FILTER (
@@ -52,7 +66,7 @@ export const employeeRepository = {
     const { rows } = await query<EmployeeRow>(
       `${employeeSelect}
        GROUP BY e.id
-       ORDER BY e.employee_code`,
+       ORDER BY LOWER(e.name) ASC, e.name ASC`,
     );
     return rows;
   },
@@ -77,7 +91,7 @@ export const employeeRepository = {
           OR e.department ILIKE $1
           OR e.manager ILIKE $1
        GROUP BY e.id
-       ORDER BY e.employee_code`,
+       ORDER BY LOWER(e.name) ASC, e.name ASC`,
       [pattern],
     );
     return rows;
@@ -229,6 +243,98 @@ export const employeeRepository = {
       [employeeId],
     );
     return rows[0]?.count ?? 0;
+  },
+
+  async findByZohoRecordId(zohoRecordId: string): Promise<EmployeeRow | null> {
+    const { rows } = await query<EmployeeRow>(
+      `SELECT id, employee_code, name, email, phone, department, designation, location, manager,
+              status::TEXT AS status, zoho_record_id, created_at, updated_at
+       FROM public.employees
+       WHERE zoho_record_id = $1
+       LIMIT 1`,
+      [zohoRecordId],
+    );
+    return rows[0] ?? null;
+  },
+
+  async upsertFromZoho(input: ZohoEmployeeUpsertInput): Promise<"created" | "updated"> {
+    const existingByZoho = await this.findByZohoRecordId(input.zohoRecordId);
+    const existing =
+      existingByZoho ?? (await this.findByEmail(input.email)) ?? (await this.findByEmployeeId(input.employeeId));
+
+    if (existing) {
+      await query(
+        `UPDATE public.employees
+         SET zoho_record_id = $2,
+             employee_code = $3,
+             manager = COALESCE(manager, $3),
+             name = $4,
+             email = $5,
+             phone = $6,
+             department = $7,
+             designation = $8,
+             location = $9,
+             status = $10::public.entity_status,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [
+          existing.id,
+          input.zohoRecordId,
+          input.employeeId.trim(),
+          input.name.trim(),
+          input.email.trim(),
+          input.phone.trim(),
+          input.department.trim(),
+          input.designation.trim(),
+          input.location.trim(),
+          input.status,
+        ],
+      );
+      return "updated";
+    }
+
+    await query(
+      `INSERT INTO public.employees (
+         zoho_record_id, employee_code, manager, name, email, phone, department, designation, location, status
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::public.entity_status)`,
+      [
+        input.zohoRecordId,
+        input.employeeId.trim(),
+        input.employeeId.trim(),
+        input.name.trim(),
+        input.email.trim(),
+        input.phone.trim(),
+        input.department.trim(),
+        input.designation.trim(),
+        input.location.trim(),
+        input.status,
+      ],
+    );
+    return "created";
+  },
+
+  async deactivateMissingZohoEmployees(activeZohoRecordIds: string[]): Promise<number> {
+    if (activeZohoRecordIds.length === 0) {
+      const { rowCount } = await query(
+        `UPDATE public.employees
+         SET status = 'inactive'::public.entity_status,
+             updated_at = NOW()
+         WHERE zoho_record_id IS NOT NULL
+           AND status <> 'inactive'`,
+      );
+      return rowCount ?? 0;
+    }
+
+    const { rowCount } = await query(
+      `UPDATE public.employees
+       SET status = 'inactive'::public.entity_status,
+           updated_at = NOW()
+       WHERE zoho_record_id IS NOT NULL
+         AND status <> 'inactive'
+         AND NOT (zoho_record_id = ANY($1::text[]))`,
+      [activeZohoRecordIds],
+    );
+    return rowCount ?? 0;
   },
 
   async getStats(): Promise<StatsRow> {

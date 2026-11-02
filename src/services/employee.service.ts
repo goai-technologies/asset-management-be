@@ -2,10 +2,21 @@ import type {
   CreateEmployeeInput,
   Employee,
   EmployeeStats,
+  EmployeeSyncResult,
   UpdateEmployeeInput,
 } from "../interfaces/employee.interface.js";
+import { zohoPeopleClient } from "../integrations/zoho-people/client.js";
 import { employeeRepository } from "../repositories/employee.repository.js";
 import { AppError } from "../utils/AppError.js";
+
+function assertManualEmployeeWritesAllowed(): void {
+  if (zohoPeopleClient.isConfigured()) {
+    throw new AppError(
+      403,
+      "Employees are synced from Zoho People. Use Sync from Zoho instead of creating or editing employees here.",
+    );
+  }
+}
 
 const EMPLOYEE_CODE_PATTERN = /^EMP\d{3}$/;
 
@@ -139,7 +150,41 @@ export const employeeService = {
     };
   },
 
+  async syncFromZoho(): Promise<EmployeeSyncResult> {
+    const remoteEmployees = await zohoPeopleClient.fetchAllEmployees();
+    let created = 0;
+    let updated = 0;
+
+    for (const remote of remoteEmployees) {
+      const result = await employeeRepository.upsertFromZoho({
+        zohoRecordId: remote.zohoRecordId,
+        employeeId: remote.employeeId,
+        name: remote.name,
+        email: remote.email,
+        phone: remote.phone,
+        department: remote.department,
+        designation: remote.designation,
+        location: remote.location,
+        status: remote.status,
+      });
+      if (result === "created") created += 1;
+      else updated += 1;
+    }
+
+    const deactivated = await employeeRepository.deactivateMissingZohoEmployees(
+      remoteEmployees.map((employee) => employee.zohoRecordId),
+    );
+
+    return {
+      created,
+      updated,
+      deactivated,
+      total: remoteEmployees.length,
+    };
+  },
+
   async createEmployee(input: CreateEmployeeInput): Promise<Employee> {
+    assertManualEmployeeWritesAllowed();
     const employeeCode = await resolveEmployeeCodeInput(input.employeeCode);
     const employeeId = input.employeeId.trim();
     const status = parseStatus(input.status);
@@ -163,6 +208,7 @@ export const employeeService = {
   },
 
   async updateEmployee(id: string, input: UpdateEmployeeInput): Promise<Employee> {
+    assertManualEmployeeWritesAllowed();
     const existing = await employeeRepository.findById(id);
     if (!existing) {
       throw new AppError(404, "Employee not found");
